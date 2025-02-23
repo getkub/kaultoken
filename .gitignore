@@ -1,0 +1,50 @@
+# Root-level ignores
+*.log
+*.log.*
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Frontend (React) ignores
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.cache/
+frontend/public/*.map
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-error.log
+frontend/yarn.lock  # Optional: if you use npm instead of yarn
+
+# Serverless (Backend) ignores
+serverless/node_modules/
+serverless/.serverless/
+serverless/serverless-state.json
+serverless/.build/
+serverless/*.zip
+serverless/*.log
+serverless/npm-debug.log*
+serverless/yarn.lock  # Optional: if using npm
+
+# Dependency and build artifacts
+node_modules/
+dist/
+build/
+
+# Local development
+*.local
+.vscode/
+.idea/
+*.sublime-*
+
+# Testing
+coverage/
+*.test.js.snap
+
+# Miscellaneous
+*.swp
+*~
+*.bak
