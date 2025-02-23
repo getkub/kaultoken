@@ -1,136 +1,144 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Define constant initial data
-const INITIAL_SUBJECTS = [
-  { 
-    id: 1, 
-    title: 'Kubernetes',
-    emoji: '🚢',
-    votes: { up: 0, down: 0 }
-  },
-  { 
-    id: 2, 
-    title: 'AWS Cloud',
-    emoji: '☁️',
-    votes: { up: 0, down: 0 }
-  },
-  { 
-    id: 3, 
-    title: 'Ubuntu Linux',
-    emoji: '🐧',
-    votes: { up: 0, down: 0 }
-  },
-  { 
-    id: 4, 
-    title: 'LangChain',
-    emoji: '🔗',
-    votes: { up: 0, down: 0 }
-  }
-];
+const USERS = ['user1', 'user2', 'user3', 'user4'];
 
 function App() {
-  const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
-  const [loading, setLoading] = useState(false);  // Start as false since we have initial data
-  const [error, setError] = useState(null);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedUser, setSelectedUser] = useState('user1');
+  const [userPoints, setUserPoints] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Only update from backend if vote counts change
-    const fetchSubjects = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/subjects');
-        const data = await response.json();
-        if (data && Array.isArray(data)) {
-          // Merge backend data with initial data, keeping emojis
-          const updatedSubjects = subjects.map(subject => {
-            const backendSubject = data.find(s => s.id === subject.id);
-            return backendSubject ? {
-              ...subject,
-              votes: backendSubject.votes,
-              lastUpdated: backendSubject.lastUpdated
-            } : subject;
-          });
-          setSubjects(updatedSubjects);
-        }
-      } catch (err) {
-        console.error('Fetch error:', err);
-        // Don't set error - keep showing initial data
-      }
-    };
-
     fetchSubjects();
-    // Poll for updates every 5 seconds
-    const interval = setInterval(fetchSubjects, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [selectedUser]);
 
-  const handleVote = async (id, type) => {
+  const fetchSubjects = async () => {
     try {
-      const response = await fetch('http://localhost:3001/vote', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id, voteType: type })
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result.subjects) {
-          // Merge vote results with existing subjects
-          const updatedSubjects = subjects.map(subject => {
-            const updatedSubject = result.subjects.find(s => s.id === subject.id);
-            return updatedSubject ? {
-              ...subject,
-              votes: updatedSubject.votes,
-              lastUpdated: updatedSubject.lastUpdated
-            } : subject;
-          });
-          setSubjects(updatedSubjects);
-        }
-      }
-    } catch (err) {
-      console.error('Vote error:', err);
-      // Show error but keep current state
-      setError('Failed to record vote');
-      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      setLoading(true);
+      const response = await fetch('http://localhost:3001/subjects');
+      const data = await response.json();
+      console.log('Fetched data:', data);  // Debug log
+      setSubjects(data.subjects || []);
+      setUserPoints(data.users || {});
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <div className="loading">Loading subjects...</div>;
+  const handleVote = async (subjectId, voteType) => {
+    try {
+      const response = await fetch('http://localhost:3001/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: subjectId,
+          voteType,
+          userId: selectedUser
+        })
+      });
+      const data = await response.json();
+      console.log('Vote response:', data);  // Debug log
+      
+      if (data.success) {
+        setSubjects(data.subjects);
+        setUserPoints(prev => ({
+          ...prev,
+          [selectedUser]: data.user
+        }));
+      } else {
+        alert(data.error || 'Failed to vote');
+      }
+    } catch (error) {
+      console.error('Error voting:', error);
+      alert('Error voting: ' + error.message);
+    }
+  };
+
+  const getCurrentUserPoints = () => {
+    const user = userPoints[selectedUser];
+    return user ? user.points : 100;
+  };
+
+  const getCurrentUserRewards = () => {
+    const user = userPoints[selectedUser];
+    return user ? (user.rewards || {}) : {};
+  };
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
     <div className="app">
-      <h1>KAUL2 Topic Voting</h1>
-      {error && <div className="error">{error}</div>}
-      <div className="subjects">
-        {subjects.map(subject => (
-          <div key={subject.id} className="subject-card">
-            <div className="subject-emoji">
-              {subject.emoji}
-            </div>
-            <h2>{subject.title}</h2>
-            <div className="vote-buttons">
-              <button 
-                onClick={() => handleVote(subject.id, 'up')} 
-                className="vote-up"
-              >
-                👍 {subject.votes.up}
-              </button>
-              <button 
-                onClick={() => handleVote(subject.id, 'down')} 
-                className="vote-down"
-              >
-                👎 {subject.votes.down}
-              </button>
-            </div>
-            <div className="last-updated">
-              {subject.lastUpdated ? 
-                `Last vote: ${new Date(subject.lastUpdated).toLocaleTimeString()}` : 
-                'No votes yet'}
-            </div>
+      <div className="user-panel">
+        <h2>User Selection</h2>
+        <select 
+          value={selectedUser} 
+          onChange={(e) => setSelectedUser(e.target.value)}
+          className="user-select"
+        >
+          {USERS.map(user => (
+            <option key={user} value={user}>{user}</option>
+          ))}
+        </select>
+        <div className="user-stats">
+          <h3>Current Points: {getCurrentUserPoints()}</h3>
+          <div className="rewards">
+            <h3>Rewards Earned:</h3>
+            {Object.entries(getCurrentUserRewards()).map(([subjectId, reward]) => (
+              <div key={subjectId} className="reward-item">
+                Subject {subjectId}: {Number(reward).toFixed(1)} points
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+      </div>
+
+      <div className="main-content">
+        <h1>Subject Voting System</h1>
+        {subjects.length === 0 ? (
+          <div className="no-subjects">No subjects available</div>
+        ) : (
+          <div className="subjects-grid">
+            {subjects.map(subject => (
+              <div key={subject.id} className="subject-card">
+                <h2>{subject.title}</h2>
+                <div className="emoji">{subject.emoji}</div>
+                <div className="votes-display">
+                  <span>👍 {subject.votes?.up || 0}</span>
+                  <span>👎 {subject.votes?.down || 0}</span>
+                </div>
+                <div className="vote-buttons">
+                  <button 
+                    onClick={() => handleVote(subject.id, 'up')}
+                    className="vote-button vote-up"
+                    disabled={getCurrentUserPoints() < 10}
+                  >
+                    Vote Up (10 points)
+                  </button>
+                  <button 
+                    onClick={() => handleVote(subject.id, 'down')}
+                    className="vote-button vote-down"
+                    disabled={getCurrentUserPoints() < 10}
+                  >
+                    Vote Down (10 points)
+                  </button>
+                </div>
+                <div className="voter-history">
+                  <h4>Recent Votes:</h4>
+                  {(subject.voterHistory || []).map((vote, index) => (
+                    <div key={index} className="vote-record">
+                      {vote.userId} voted ({vote.points} points)
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,10 +5,10 @@
       "title": "Kubernetes",
       "emoji": "🚢",
       "votes": {
-        "up": 2,
+        "up": 6,
         "down": 0
       },
-      "lastUpdated": "2025-02-23T11:52:53.432Z",
+      "lastUpdated": "2025-02-23T11:58:17.217Z",
       "voterHistory": [
         {
           "timestamp": "2025-02-23T11:52:32.648Z",
@@ -16,6 +16,26 @@
         },
         {
           "timestamp": "2025-02-23T11:52:53.432Z",
+          "points": 10
+        },
+        {
+          "userId": "user1",
+          "timestamp": "2025-02-23T11:57:01.433Z",
+          "points": 10
+        },
+        {
+          "userId": "user2",
+          "timestamp": "2025-02-23T11:57:16.600Z",
+          "points": 10
+        },
+        {
+          "userId": "user3",
+          "timestamp": "2025-02-23T11:57:39.988Z",
+          "points": 10
+        },
+        {
+          "userId": "user3",
+          "timestamp": "2025-02-23T11:58:17.217Z",
           "points": 10
         }
       ]
@@ -25,13 +45,23 @@
       "title": "AWS Cloud",
       "emoji": "☁️",
       "votes": {
-        "up": 1,
+        "up": 3,
         "down": 0
       },
-      "lastUpdated": "2025-02-23T11:52:37.168Z",
+      "lastUpdated": "2025-02-23T11:58:07.693Z",
       "voterHistory": [
         {
           "timestamp": "2025-02-23T11:52:37.168Z",
+          "points": 10
+        },
+        {
+          "userId": "user1",
+          "timestamp": "2025-02-23T11:57:09.090Z",
+          "points": 10
+        },
+        {
+          "userId": "user3",
+          "timestamp": "2025-02-23T11:58:07.693Z",
           "points": 10
         }
       ]
@@ -61,8 +91,28 @@
     "undefined": {
       "points": 70,
       "rewards": {
-        "1": 12.5,
+        "1": 42.5,
+        "2": 15
+      }
+    },
+    "user1": {
+      "points": 80,
+      "rewards": {
+        "1": 5,
         "2": 5
+      }
+    },
+    "user2": {
+      "points": 90,
+      "rewards": {
+        "1": 1.875
+      }
+    },
+    "user3": {
+      "points": 70,
+      "rewards": {
+        "1": 0.78125,
+        "2": 1.25
       }
     }
   }
