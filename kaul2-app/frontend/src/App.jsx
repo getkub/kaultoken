@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import './App.css';
 
 function App() {
@@ -8,19 +7,34 @@ function App() {
     { id: 2, title: 'Second Subject', votes: { up: 0, down: 0 } }
   ]);
 
-  const handleVote = (id, type) => {
-    setSubjects(subjects.map(subject => {
-      if (subject.id === id) {
-        return {
-          ...subject,
-          votes: {
-            ...subject.votes,
-            [type]: subject.votes[type] + 1
+  const handleVote = async (id, type) => {
+    try {
+      const response = await fetch('http://localhost:3001/vote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, voteType: type })
+      });
+      
+      if (response.ok) {
+        // Update local state
+        setSubjects(subjects.map(subject => {
+          if (subject.id === id) {
+            return {
+              ...subject,
+              votes: {
+                ...subject.votes,
+                [type]: subject.votes[type] + 1
+              }
+            };
           }
-        };
+          return subject;
+        }));
       }
-      return subject;
-    }));
+    } catch (error) {
+      console.error('Voting failed:', error);
+    }
   };
 
   return (
@@ -31,10 +45,10 @@ function App() {
           <div key={subject.id} className="subject-card">
             <h2>{subject.title}</h2>
             <div className="vote-buttons">
-              <button onClick={() => handleVote(subject.id, 'up')}>
+              <button onClick={() => handleVote(subject.id, 'up')} className="vote-up">
                 👍 {subject.votes.up}
               </button>
-              <button onClick={() => handleVote(subject.id, 'down')}>
+              <button onClick={() => handleVote(subject.id, 'down')} className="vote-down">
                 👎 {subject.votes.down}
               </button>
             </div>

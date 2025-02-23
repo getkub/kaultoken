@@ -2,7 +2,10 @@
   "name": "subject-voting-api",
   "version": "1.0.0",
   "type": "module",
-  "private": true,
+  "scripts": {
+    "dev": "serverless offline start",
+    "start": "serverless offline start"
+  },
   "dependencies": {
     "@types/aws-lambda": "^8.10.92"
   },

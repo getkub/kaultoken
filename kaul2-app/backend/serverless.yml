@@ -9,9 +9,20 @@ plugins:
   - serverless-offline
 
 functions:
-  hello:
-    handler: handler.hello
+  getSubjects:
+    handler: handler.getSubjects
     events:
       - httpApi:
-          path: /
+          path: /subjects
           method: get
+  recordVote:
+    handler: handler.recordVote
+    events:
+      - httpApi:
+          path: /vote
+          method: post
+
+custom:
+  serverless-offline:
+    httpPort: 3001
+    noPrependStageInUrl: true
