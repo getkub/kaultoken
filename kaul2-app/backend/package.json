@@ -1,0 +1,13 @@
+{
+  "name": "subject-voting-api",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@types/aws-lambda": "^8.10.92"
+  },
+  "devDependencies": {
+    "serverless": "^4.6.4",
+    "serverless-offline": "latest"
+  }
+}
