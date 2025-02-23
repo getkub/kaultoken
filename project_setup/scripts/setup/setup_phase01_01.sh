@@ -103,18 +103,27 @@ touch ../infrastructure/readme.md  # Placeholder for Terraform or additional IaC
 
 # Add basic package.json for frontend
 cd ../frontend
-cat <<EOL > package.json
+cat <<EOL > "$PROJECT_PATH/frontend/package.json"
 {
   "name": "frontend",
   "version": "1.0.0",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build"
+    "test": "jest"
   },
   "dependencies": {
     "react": "^18.2.0",
     "axios": "^1.6.0",
-    "aws-amplify": "^6.0.0"
+    "aws-amplify": "^6.0.0",
+    "react-scripts": "^5.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/jest-dom": "^6.4.2"
+  },
+  "jest": {
+    "testEnvironment": "jsdom"
   }
 }
 EOL
