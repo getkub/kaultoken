@@ -1,12 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+const EMOJIS = {
+  UP: '\u{1F44D}',
+  DOWN: '\u{1F44E}',
+  INFO: '\u{2139}'
+};
+
+function SubjectDetail({ subject, onClose, selectedUser }) {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  return (
+    <div className="subject-detail-modal">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2>{subject.title || `Subject ${subject.id}`}</h2>
+          <button className="close-button" onClick={onClose}>×</button>
+        </div>
+        
+        <div className="modal-body">
+          <div className="vote-stats">
+            <div className="stat-item up">
+              <span className="emoji">{EMOJIS.UP}</span>
+              <span className="stat-value">{subject.votes?.up || 0}</span>
+            </div>
+            <div className="stat-item down">
+              <span className="emoji">{EMOJIS.DOWN}</span>
+              <span className="stat-value">{subject.votes?.down || 0}</span>
+            </div>
+          </div>
+
+          <div className="vote-history">
+            <h3>Vote History</h3>
+            <div className="vote-list">
+              {subject.voterHistory?.slice().reverse().map((vote, index) => (
+                <div 
+                  key={index} 
+                  className={`vote-item ${vote.userId === selectedUser ? 'highlight' : ''}`}
+                >
+                  <span className="emoji">
+                    {vote.voteType === 'up' ? EMOJIS.UP : EMOJIS.DOWN}
+                  </span>
+                  <span className="voter-id">{vote.userId}</span>
+                  <span className="vote-position">#{vote.position}</span>
+                  <span className="vote-time">{formatDate(vote.timestamp)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [subjects, setSubjects] = useState([]);
   const [selectedUser, setSelectedUser] = useState('user1');
   const [userPoints, setUserPoints] = useState({});
   const [userProfiles, setUserProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
   useEffect(() => {
     fetchSubjects();
@@ -181,49 +237,49 @@ function App() {
         </div>
       </div>
 
-      <div className="main-content">
-        <h1>Subject Voting System</h1>
-        {subjects.length === 0 ? (
-          <div className="no-subjects">No subjects available</div>
-        ) : (
-          <div className="subjects-grid">
-            {subjects.map(subject => (
-              <div key={subject.id} className="subject-card">
-                <h2>{subject.title}</h2>
-                <div className="emoji">{subject.emoji}</div>
-                <div className="votes-display">
-                  <span>👍 {subject.votes?.up || 0}</span>
-                  <span>👎 {subject.votes?.down || 0}</span>
-                </div>
-                <div className="vote-buttons">
-                  <button 
-                    onClick={() => handleVote(subject.id, 'up')}
-                    className="vote-button vote-up"
-                    disabled={calculatePointsStats().current < 10}
-                  >
-                    Vote Up (10 points)
-                  </button>
-                  <button 
-                    onClick={() => handleVote(subject.id, 'down')}
-                    className="vote-button vote-down"
-                    disabled={calculatePointsStats().current < 10}
-                  >
-                    Vote Down (10 points)
-                  </button>
-                </div>
-                <div className="voter-history">
-                  <h4>Recent Votes:</h4>
-                  {(subject.voterHistory || []).map((vote, index) => (
-                    <div key={index} className="vote-record">
-                      {vote.userId} voted ({vote.points} points)
-                    </div>
-                  ))}
-                </div>
+      <div className="subjects-panel">
+        <h2>Subjects</h2>
+        <div className="subjects-grid">
+          {subjects.map(subject => (
+            <div key={subject.id} className="subject-card">
+              <div className="subject-image">
+                {subject.emoji || '🖼️'}
               </div>
-            ))}
-          </div>
-        )}
+              <h3>{subject.title || `Subject ${subject.id}`}</h3>
+              <div className="vote-actions">
+                <button 
+                  className="vote-button up"
+                  onClick={(e) => handleVote(subject.id, 'up')}
+                >
+                  <span className="emoji">{EMOJIS.UP}</span>
+                  <span className="count">{subject.votes?.up || 0}</span>
+                </button>
+                <button 
+                  className="vote-button down"
+                  onClick={(e) => handleVote(subject.id, 'down')}
+                >
+                  <span className="emoji">{EMOJIS.DOWN}</span>
+                  <span className="count">{subject.votes?.down || 0}</span>
+                </button>
+                <button 
+                  className="details-button"
+                  onClick={() => setSelectedSubject(subject)}
+                >
+                  <span className="emoji">{EMOJIS.INFO}</span> Details
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {selectedSubject && (
+        <SubjectDetail 
+          subject={selectedSubject}
+          onClose={() => setSelectedSubject(null)}
+          selectedUser={selectedUser}
+        />
+      )}
     </div>
   );
 }

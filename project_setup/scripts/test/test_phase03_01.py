@@ -356,12 +356,68 @@ export const options = async (event) => {
         app_code = """import React, { useState, useEffect } from 'react';
 import './App.css';
 
+const EMOJIS = {
+  UP: '\\u{1F44D}',
+  DOWN: '\\u{1F44E}',
+  INFO: '\\u{2139}'
+};
+
+function SubjectDetail({ subject, onClose, selectedUser }) {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  return (
+    <div className="subject-detail-modal">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h2>{subject.title || `Subject ${subject.id}`}</h2>
+          <button className="close-button" onClick={onClose}>×</button>
+        </div>
+        
+        <div className="modal-body">
+          <div className="vote-stats">
+            <div className="stat-item up">
+              <span className="emoji">{EMOJIS.UP}</span>
+              <span className="stat-value">{subject.votes?.up || 0}</span>
+            </div>
+            <div className="stat-item down">
+              <span className="emoji">{EMOJIS.DOWN}</span>
+              <span className="stat-value">{subject.votes?.down || 0}</span>
+            </div>
+          </div>
+
+          <div className="vote-history">
+            <h3>Vote History</h3>
+            <div className="vote-list">
+              {subject.voterHistory?.slice().reverse().map((vote, index) => (
+                <div 
+                  key={index} 
+                  className={`vote-item ${vote.userId === selectedUser ? 'highlight' : ''}`}
+                >
+                  <span className="emoji">
+                    {vote.voteType === 'up' ? EMOJIS.UP : EMOJIS.DOWN}
+                  </span>
+                  <span className="voter-id">{vote.userId}</span>
+                  <span className="vote-position">#{vote.position}</span>
+                  <span className="vote-time">{formatDate(vote.timestamp)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [subjects, setSubjects] = useState([]);
   const [selectedUser, setSelectedUser] = useState('user1');
   const [userPoints, setUserPoints] = useState({});
   const [userProfiles, setUserProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
   useEffect(() => {
     fetchSubjects();
@@ -536,49 +592,49 @@ function App() {
         </div>
       </div>
 
-      <div className="main-content">
-        <h1>Subject Voting System</h1>
-        {subjects.length === 0 ? (
-          <div className="no-subjects">No subjects available</div>
-        ) : (
-          <div className="subjects-grid">
-            {subjects.map(subject => (
-              <div key={subject.id} className="subject-card">
-                <h2>{subject.title}</h2>
-                <div className="emoji">{subject.emoji}</div>
-                <div className="votes-display">
-                  <span>👍 {subject.votes?.up || 0}</span>
-                  <span>👎 {subject.votes?.down || 0}</span>
-                </div>
-                <div className="vote-buttons">
-                  <button 
-                    onClick={() => handleVote(subject.id, 'up')}
-                    className="vote-button vote-up"
-                    disabled={calculatePointsStats().current < 10}
-                  >
-                    Vote Up (10 points)
-                  </button>
-                  <button 
-                    onClick={() => handleVote(subject.id, 'down')}
-                    className="vote-button vote-down"
-                    disabled={calculatePointsStats().current < 10}
-                  >
-                    Vote Down (10 points)
-                  </button>
-                </div>
-                <div className="voter-history">
-                  <h4>Recent Votes:</h4>
-                  {(subject.voterHistory || []).map((vote, index) => (
-                    <div key={index} className="vote-record">
-                      {vote.userId} voted ({vote.points} points)
-                    </div>
-                  ))}
-                </div>
+      <div className="subjects-panel">
+        <h2>Subjects</h2>
+        <div className="subjects-grid">
+          {subjects.map(subject => (
+            <div key={subject.id} className="subject-card">
+              <div className="subject-image">
+                {subject.emoji || '🖼️'}
               </div>
-            ))}
-          </div>
-        )}
+              <h3>{subject.title || `Subject ${subject.id}`}</h3>
+              <div className="vote-actions">
+                <button 
+                  className="vote-button up"
+                  onClick={(e) => handleVote(subject.id, 'up')}
+                >
+                  <span className="emoji">{EMOJIS.UP}</span>
+                  <span className="count">{subject.votes?.up || 0}</span>
+                </button>
+                <button 
+                  className="vote-button down"
+                  onClick={(e) => handleVote(subject.id, 'down')}
+                >
+                  <span className="emoji">{EMOJIS.DOWN}</span>
+                  <span className="count">{subject.votes?.down || 0}</span>
+                </button>
+                <button 
+                  className="details-button"
+                  onClick={() => setSelectedSubject(subject)}
+                >
+                  <span className="emoji">{EMOJIS.INFO}</span> Details
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {selectedSubject && (
+        <SubjectDetail 
+          subject={selectedSubject}
+          onClose={() => setSelectedSubject(null)}
+          selectedUser={selectedUser}
+        />
+      )}
     </div>
   );
 }
@@ -684,113 +740,202 @@ export default App;
   color: #333;
 }
 
-.main-content {
+.subjects-panel {
   flex: 1;
   padding: 20px;
 }
 
 .subjects-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
-  margin-top: 20px;
+  padding: 20px;
 }
 
 .subject-card {
   background: white;
-  padding: 20px;
   border-radius: 12px;
+  padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.subject-image {
+  font-size: 5em;  /* Increased size for subject emojis */
+  text-align: center;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.subject-image:hover {
+  transform: scale(1.05);
+  background: #f0f0f0;
+}
+
+.vote-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
 }
 
 .emoji {
-  font-size: 48px;
-  text-align: center;
-  margin: 15px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", EmojiSymbols, "EmojiOne Mozilla", "Twemoji Mozilla", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-block;
 }
 
-.votes-display {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin: 10px 0;
-  font-size: 1.2em;
+.subject-image .emoji {
+  font-size: 1em;  /* Full size for subject emojis */
 }
 
-.vote-buttons {
-  display: flex;
-  gap: 10px;
-  margin: 15px 0;
+.vote-button .emoji {
+  font-size: 1.4em;  /* Smaller size for vote emojis */
 }
 
 .vote-button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #eee;
+  border-radius: 20px;
   cursor: pointer;
-  font-weight: 500;
   transition: all 0.2s;
+  background: white;
 }
 
-.vote-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.vote-up {
+.vote-button:hover {
   background: #e3f2fd;
-  color: #1976d2;
+  border-color: #bbdefb;
 }
 
-.vote-down {
-  background: #fce4ec;
-  color: #c2185b;
+.vote-button .count {
+  font-weight: 500;
 }
 
-.vote-up:hover:not(:disabled) {
+.details-button {
+  margin-left: auto;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  background: #e3f2fd;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.details-button:hover {
   background: #bbdefb;
 }
 
-.vote-down:hover:not(:disabled) {
-  background: #f8bbd0;
+.subject-detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
-.voter-history {
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid #eee;
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.vote-record {
-  padding: 8px;
-  margin: 5px 0;
-  background: #f8f9fa;
-  border-radius: 4px;
-  font-size: 0.9em;
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.no-subjects {
-  text-align: center;
-  padding: 40px;
-  font-size: 1.2em;
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
   color: #666;
 }
 
-.points-row .up-rewards {
-  color: #4caf50;
+.modal-body {
+  padding: 20px;
 }
 
-.points-row .down-rewards {
-  color: #f44336;
+.vote-stats {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
-.reward-item.up {
-  border-left: 3px solid #4caf50;
+.stat-item {
+  flex: 1;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
 }
 
-.reward-item.down {
-  border-left: 3px solid #f44336;
+.stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 500;
+  margin-top: 5px;
+}
+
+.vote-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.vote-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.vote-item.highlight {
+  background: #fff3e0;
+}
+
+.vote-type {
+  font-size: 1.2em;
+}
+
+.voter-id {
+  font-weight: 500;
+  flex: 1;
+}
+
+.vote-position {
+  color: #666;
+}
+
+.vote-time {
+  color: #666;
+  font-size: 0.9em;
 }
 
 .rewards-breakdown {
