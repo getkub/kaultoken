@@ -1,52 +1,71 @@
-// In-memory storage
-let subjects = [
-  { id: 1, title: 'First Subject', votes: { up: 0, down: 0 } },
-  { id: 2, title: 'Second Subject', votes: { up: 0, down: 0 } }
-];
+import db from './db.js'
 
 // GET /subjects
 export const getSubjects = async (event) => {
-  console.log('GET /subjects called');
-  return {
-    statusCode: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
-    },
-    body: JSON.stringify(subjects)
-  };
-};
-
-// POST /vote
-export const recordVote = async (event) => {
-  console.log('POST /vote called with body:', event.body);
   try {
-    const { id, voteType } = JSON.parse(event.body);
+    await db.read()
+    console.log('GET /subjects - Current data:', JSON.stringify(db.data.subjects, null, 2))
     
-    subjects = subjects.map(subject => {
-      if (subject.id === id) {
-        return {
-          ...subject,
-          votes: {
-            ...subject.votes,
-            [voteType]: subject.votes[voteType] + 1
-          }
-        };
-      }
-      return subject;
-    });
-
-    console.log('Updated subjects:', subjects);
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify({ success: true, subjects })
-    };
+      body: JSON.stringify(db.data.subjects)
+    }
   } catch (error) {
-    console.error('Error processing vote:', error);
+    console.error('Error reading subjects:', error)
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ 
+        success: false, 
+        error: 'Failed to read database' 
+      })
+    }
+  }
+}
+
+// POST /vote
+export const recordVote = async (event) => {
+  console.log('POST /vote called with body:', event.body)
+  try {
+    const { id, voteType } = JSON.parse(event.body)
+    
+    await db.read()
+    db.data.subjects = db.data.subjects.map(subject => {
+      if (subject.id === id) {
+        return {
+          ...subject,
+          votes: {
+            ...subject.votes,
+            [voteType]: subject.votes[voteType] + 1
+          },
+          lastUpdated: new Date().toISOString()
+        }
+      }
+      return subject
+    })
+    await db.write()
+
+    console.log('Updated vote data:', JSON.stringify(db.data.subjects, null, 2))
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ 
+        success: true, 
+        subjects: db.data.subjects 
+      })
+    }
+  } catch (error) {
+    console.error('Error processing vote:', error)
     return {
       statusCode: 400,
       headers: {
@@ -57,19 +76,8 @@ export const recordVote = async (event) => {
         success: false, 
         error: 'Invalid request' 
       })
-    };
+    }
   }
-};
+}
 
-// OPTIONS handler for CORS
-export const options = async (event) => {
-  return {
-    statusCode: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    },
-    body: JSON.stringify({})
-  };
-};
+// Rest of handler.js remains the same...

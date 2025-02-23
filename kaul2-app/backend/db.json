@@ -1,0 +1,22 @@
+{
+  "subjects": [
+    {
+      "id": 1,
+      "title": "First Subject",
+      "votes": {
+        "up": 4,
+        "down": 1
+      },
+      "lastUpdated": "2025-02-23T11:06:04.588Z"
+    },
+    {
+      "id": 2,
+      "title": "Second Subject",
+      "votes": {
+        "up": 0,
+        "down": 1
+      },
+      "lastUpdated": "2025-02-23T11:00:50.656Z"
+    }
+  ]
+}
