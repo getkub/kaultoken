@@ -1,0 +1,13 @@
+{
+  "name": "serverless-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "deploy": "sls deploy"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1510.0"
+  }
+}
