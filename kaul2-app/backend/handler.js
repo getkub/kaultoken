@@ -3,18 +3,57 @@ import usersDb from './users.js'
 
 const VOTE_COST = 10
 const INITIAL_POINTS = 100
-const MIN_REWARD = 0.000001  // Minimum reward threshold
-
-// Tier configuration for precise distribution
+const MIN_REWARD = 0.000001
 const REWARD_TIERS = {
-  TIER1: { max: 10, share: 5, reward: 0.5 },        // First 10: 5 points (0.5 each)
-  TIER2: { max: 100, share: 3, reward: 0.033 },     // Next 90: 3 points (0.033 each)
-  TIER3: { max: 1000, share: 1.5, reward: 0.00167 }, // Next 900: 1.5 points (0.00167 each)
-  TIER4: { max: 10000, share: 0.5, reward: 0.000056 } // Next 9000: 0.5 points (0.000056 each)
+  TIER1: { max: 10, share: 5, reward: 0.5 },
+  TIER2: { max: 100, share: 3, reward: 0.033 },
+  TIER3: { max: 1000, share: 1.5, reward: 0.00167 },
+  TIER4: { max: 10000, share: 0.5, reward: 0.000056 }
+}
+
+const logger = {
+  info: (message, data = {}) => {
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'INFO',
+      message,
+      ...data
+    }))
+  },
+  error: (message, error = {}, data = {}) => {
+    console.error(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'ERROR',
+      message,
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      },
+      ...data
+    }))
+  },
+  debug: (message, data = {}) => {
+    console.debug(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'DEBUG',
+      message,
+      ...data
+    }))
+  },
+  metric: (message, metrics = {}) => {
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'METRIC',
+      message,
+      ...metrics
+    }))
+  }
 }
 
 const initializeUser = (userId) => {
   if (!usersDb.data.points[userId]) {
+    logger.info('Initializing new user', { userId, initialPoints: INITIAL_POINTS })
     usersDb.data.points[userId] = {
       points: INITIAL_POINTS,
       upVoteRewards: {},
@@ -26,46 +65,62 @@ const initializeUser = (userId) => {
 }
 
 const calculateRewardForPosition = (position) => {
-  // Exact reward based on position tier
+  let tier = 'NONE'
+  let reward = 0
+
   if (position <= REWARD_TIERS.TIER1.max) {
-    return REWARD_TIERS.TIER1.reward
+    tier = 'TIER1'
+    reward = REWARD_TIERS.TIER1.reward
   } else if (position <= REWARD_TIERS.TIER2.max) {
-    return REWARD_TIERS.TIER2.reward
+    tier = 'TIER2'
+    reward = REWARD_TIERS.TIER2.reward
   } else if (position <= REWARD_TIERS.TIER3.max) {
-    return REWARD_TIERS.TIER3.reward
+    tier = 'TIER3'
+    reward = REWARD_TIERS.TIER3.reward
   } else if (position <= REWARD_TIERS.TIER4.max) {
-    return REWARD_TIERS.TIER4.reward
+    tier = 'TIER4'
+    reward = REWARD_TIERS.TIER4.reward
   }
-  return 0
+
+  logger.debug('Calculated reward', { position, tier, reward })
+  return reward
 }
 
 const distributeRewards = async (subjectId, voteType, currentVoterId) => {
   try {
+    logger.info('Starting reward distribution', {
+      subjectId,
+      voteType,
+      currentVoterId
+    })
+
     const subject = subjectsDb.data.subjects.find(s => s.id === subjectId)
-    if (!subject || !subject.voterHistory) return
+    if (!subject || !subject.voterHistory) {
+      logger.error('Invalid subject or voter history', {}, { subjectId })
+      return
+    }
 
-    // Get previous voters of the same type
     const previousVoters = subject.voterHistory
-      .filter(vote => 
-        vote.voteType === voteType && 
-        vote.userId !== currentVoterId
-      )
+      .filter(vote => vote.voteType === voteType && vote.userId !== currentVoterId)
 
-    console.log(`
-Distributing ${voteType} rewards for subject ${subjectId}`)
-    console.log(`Current voter: ${currentVoterId}`)
-    console.log(`Previous voters: ${previousVoters.length}`)
+    logger.info('Found previous voters', {
+      subjectId,
+      voterCount: previousVoters.length
+    })
 
     let totalDistributed = 0
+    const distributions = []
     
-    // Calculate and distribute rewards
     for (let i = 0; i < previousVoters.length; i++) {
       const voter = previousVoters[i]
       const position = i + 1
       const rewardShare = calculateRewardForPosition(position)
       
       if (rewardShare < MIN_REWARD) {
-        console.log(`Reward too small (${rewardShare}), stopping distribution`)
+        logger.debug('Reward too small, stopping distribution', {
+          position,
+          rewardShare
+        })
         break
       }
 
@@ -80,24 +135,35 @@ Distributing ${voteType} rewards for subject ${subjectId}`)
       user.points += rewardShare
       totalDistributed += rewardShare
 
-      // Record reward in history
-      user.rewardHistory.push({
-        timestamp: new Date().toISOString(),
-        subjectId: String(subjectId),
-        amount: rewardShare,
-        fromUser: currentVoterId,
-        voteType: voteType,
-        position: position,
-        tier: position <= 10 ? 1 : position <= 100 ? 2 : position <= 1000 ? 3 : 4
+      distributions.push({
+        userId: voter.userId,
+        position,
+        reward: rewardShare,
+        newTotal: user.points
       })
 
-      console.log(`Rewarded ${voter.userId} (position ${position}, tier ${position <= 10 ? 1 : position <= 100 ? 2 : position <= 1000 ? 3 : 4}) with ${rewardShare.toFixed(6)} points`)
+      logger.debug('Distributed reward', {
+        userId: voter.userId,
+        position,
+        reward: rewardShare,
+        newTotal: user.points
+      })
     }
     
-    console.log(`Total points distributed: ${totalDistributed.toFixed(6)} of ${VOTE_COST}`)
+    logger.info('Completed reward distribution', {
+      subjectId,
+      totalDistributed,
+      distributionCount: distributions.length,
+      distributions
+    })
+
     await usersDb.write()
   } catch (error) {
-    console.error('Error in distributeRewards:', error)
+    logger.error('Error in distributeRewards', error, {
+      subjectId,
+      voteType,
+      currentVoterId
+    })
   }
 }
 
@@ -129,41 +195,55 @@ export const getSubjects = async (event) => {
   }
 }
 
-export const recordVote = async (event) => {
+const _recordVote = async (event) => {
+  const startTime = Date.now()
+  const requestId = event.requestContext?.requestId || 'unknown'
+
   try {
     const { id, voteType, userId } = JSON.parse(event.body)
+    logger.info('Vote request received', { 
+      requestId,
+      subjectId: id,
+      voteType,
+      userId 
+    })
+
     await Promise.all([subjectsDb.read(), usersDb.read()])
     
     const user = initializeUser(userId)
     if (user.points < VOTE_COST) {
+      logger.error('Insufficient points', {}, { userId, points: user.points })
       throw new Error('Not enough points to vote')
     }
 
     const subject = subjectsDb.data.subjects.find(s => s.id === id)
     if (!subject) {
+      logger.error('Subject not found', {}, { id })
       throw new Error('Subject not found')
     }
 
-    // Initialize if needed
     if (!subject.votes) subject.votes = { up: 0, down: 0 }
     if (!subject.voterHistory) subject.voterHistory = []
 
-    // Check for duplicate votes
     const hasVoted = subject.voterHistory.some(vote => 
       vote.userId === userId && vote.voteType === voteType
     )
+    
     if (hasVoted) {
+      logger.error('Duplicate vote attempt', {}, { userId, subjectId: id, voteType })
       throw new Error('You have already voted this way on this subject')
     }
 
-    // Deduct points first
     user.points -= VOTE_COST
+    logger.info('Points deducted for vote', {
+      userId,
+      cost: VOTE_COST,
+      newTotal: user.points
+    })
 
-    // Record vote
     subject.votes[voteType]++
     subject.lastUpdated = new Date().toISOString()
     
-    // Add to voter history with position
     subject.voterHistory.push({
       userId,
       timestamp: new Date().toISOString(),
@@ -172,17 +252,29 @@ export const recordVote = async (event) => {
       position: subject.voterHistory.length + 1
     })
 
-    // Save changes and distribute rewards
+    logger.info('Vote recorded', {
+      subjectId: id,
+      voteType,
+      userId,
+      position: subject.voterHistory.length
+    })
+
     await Promise.all([
       subjectsDb.write(),
       distributeRewards(id, voteType, userId)
     ])
 
-    // Get updated user data
     await usersDb.read()
     const updatedUser = usersDb.data.points[userId]
 
-    return {
+    // Log final points as DEBUG
+    logger.debug('Points updated', {
+      requestId,
+      userId,
+      finalPoints: updatedUser.points
+    })
+
+    const response = {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -195,8 +287,42 @@ export const recordVote = async (event) => {
         message: `Vote recorded! Rewards distributed to previous voters.`
       })
     }
+
+    const duration = Date.now() - startTime
+    const billedDuration = Math.ceil(duration)
+
+    logger.info('Vote processing completed', {
+      requestId,
+      userId
+    })
+
+    logger.metric('Lambda execution metrics', {
+      requestId,
+      functionName: 'recordVote',
+      duration: `${duration} ms`,
+      billedDuration: `${billedDuration} ms`,
+      memoryUsed: process.memoryUsage().heapUsed,
+      timestamp: new Date().toISOString()
+    })
+
+    return response
   } catch (error) {
-    console.error('Error:', error)
+    logger.error('Vote processing failed', error, {
+      requestId,
+      body: event.body
+    })
+
+    const duration = Date.now() - startTime
+    logger.metric('Lambda execution metrics', {
+      requestId,
+      functionName: 'recordVote',
+      duration: `${duration} ms`,
+      billedDuration: `${Math.ceil(duration)} ms`,
+      memoryUsed: process.memoryUsage().heapUsed,
+      status: 'error',
+      timestamp: new Date().toISOString()
+    })
+
     return {
       statusCode: 400,
       headers: {
@@ -208,6 +334,45 @@ export const recordVote = async (event) => {
         error: error.message 
       })
     }
+  }
+}
+
+// Wrapper to prevent AWS default logging
+export const recordVote = async (event, context) => {
+  // Disable AWS Lambda's default logging
+  context.callbackWaitsForEmptyEventLoop = false
+  
+  // Store original console
+  const originalConsole = {
+    log: console.log,
+    error: console.error,
+    debug: console.debug
+  }
+
+  // Replace console temporarily
+  console.log = (...args) => {
+    if (typeof args[0] === 'string' && !args[0].includes('(λ: recordVote)')) {
+      originalConsole.log.apply(console, args)
+    }
+  }
+  console.error = (...args) => {
+    if (typeof args[0] === 'string' && !args[0].includes('(λ: recordVote)')) {
+      originalConsole.error.apply(console, args)
+    }
+  }
+  console.debug = (...args) => {
+    if (typeof args[0] === 'string' && !args[0].includes('(λ: recordVote)')) {
+      originalConsole.debug.apply(console, args)
+    }
+  }
+
+  try {
+    return await _recordVote(event)
+  } finally {
+    // Restore original console
+    console.log = originalConsole.log
+    console.error = originalConsole.error
+    console.debug = originalConsole.debug
   }
 }
 
