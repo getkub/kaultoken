@@ -1,30 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+// Define constant initial data
+const INITIAL_SUBJECTS = [
+  { 
+    id: 1, 
+    title: 'Kubernetes',
+    emoji: '🚢',
+    votes: { up: 0, down: 0 }
+  },
+  { 
+    id: 2, 
+    title: 'AWS Cloud',
+    emoji: '☁️',
+    votes: { up: 0, down: 0 }
+  },
+  { 
+    id: 3, 
+    title: 'Ubuntu Linux',
+    emoji: '🐧',
+    votes: { up: 0, down: 0 }
+  },
+  { 
+    id: 4, 
+    title: 'LangChain',
+    emoji: '🔗',
+    votes: { up: 0, down: 0 }
+  }
+];
+
 function App() {
-  const [subjects, setSubjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
+  const [loading, setLoading] = useState(false);  // Start as false since we have initial data
   const [error, setError] = useState(null);
 
-  // Fetch initial data
   useEffect(() => {
-    fetchSubjects();
-  }, []);
+    // Only update from backend if vote counts change
+    const fetchSubjects = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/subjects');
+        const data = await response.json();
+        if (data && Array.isArray(data)) {
+          // Merge backend data with initial data, keeping emojis
+          const updatedSubjects = subjects.map(subject => {
+            const backendSubject = data.find(s => s.id === subject.id);
+            return backendSubject ? {
+              ...subject,
+              votes: backendSubject.votes,
+              lastUpdated: backendSubject.lastUpdated
+            } : subject;
+          });
+          setSubjects(updatedSubjects);
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+        // Don't set error - keep showing initial data
+      }
+    };
 
-  const fetchSubjects = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/subjects');
-      const data = await response.json();
-      console.log('Loaded subjects:', data);
-      setSubjects(data);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load subjects:', err);
-      setError('Failed to load subjects');
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchSubjects();
+    // Poll for updates every 5 seconds
+    const interval = setInterval(fetchSubjects, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleVote = async (id, type) => {
     try {
@@ -38,25 +76,39 @@ function App() {
       
       if (response.ok) {
         const result = await response.json();
-        console.log('Vote recorded:', result);
-        setSubjects(result.subjects);
-        setError(null);
+        if (result.subjects) {
+          // Merge vote results with existing subjects
+          const updatedSubjects = subjects.map(subject => {
+            const updatedSubject = result.subjects.find(s => s.id === subject.id);
+            return updatedSubject ? {
+              ...subject,
+              votes: updatedSubject.votes,
+              lastUpdated: updatedSubject.lastUpdated
+            } : subject;
+          });
+          setSubjects(updatedSubjects);
+        }
       }
     } catch (err) {
-      console.error('Voting failed:', err);
+      console.error('Vote error:', err);
+      // Show error but keep current state
       setError('Failed to record vote');
+      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
     }
   };
 
   if (loading) return <div className="loading">Loading subjects...</div>;
-  if (error) return <div className="error">{error}</div>;
 
   return (
     <div className="app">
-      <h1>Kaul2 Voting Demo</h1>
+      <h1>KAUL2 Topic Voting</h1>
+      {error && <div className="error">{error}</div>}
       <div className="subjects">
         {subjects.map(subject => (
           <div key={subject.id} className="subject-card">
+            <div className="subject-emoji">
+              {subject.emoji}
+            </div>
             <h2>{subject.title}</h2>
             <div className="vote-buttons">
               <button 
@@ -73,7 +125,9 @@ function App() {
               </button>
             </div>
             <div className="last-updated">
-              Last updated: {new Date(subject.lastUpdated).toLocaleString()}
+              {subject.lastUpdated ? 
+                `Last vote: ${new Date(subject.lastUpdated).toLocaleTimeString()}` : 
+                'No votes yet'}
             </div>
           </div>
         ))}
