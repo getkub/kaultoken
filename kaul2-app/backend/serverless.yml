@@ -21,6 +21,12 @@ functions:
       - httpApi:
           path: /vote
           method: post
+  options:
+    handler: handler.options
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: options
 
 custom:
   serverless-offline:

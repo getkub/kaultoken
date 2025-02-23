@@ -26,15 +26,17 @@ cat > $BACKEND_PATH/package.json << 'EOL'
 }
 EOL
 
-# Update backend handler to store votes in memory
+# Create backend handler with proper exports
 cat > $BACKEND_PATH/handler.js << 'EOL'
-// In-memory storage for votes
+// In-memory storage
 let subjects = [
   { id: 1, title: 'First Subject', votes: { up: 0, down: 0 } },
   { id: 2, title: 'Second Subject', votes: { up: 0, down: 0 } }
 ];
 
-export const getSubjects = async () => {
+// GET /subjects
+export const getSubjects = async (event) => {
+  console.log('GET /subjects called');
   return {
     statusCode: 200,
     headers: {
@@ -45,34 +47,65 @@ export const getSubjects = async () => {
   };
 };
 
+// POST /vote
 export const recordVote = async (event) => {
-  const { id, voteType } = JSON.parse(event.body);
-  
-  subjects = subjects.map(subject => {
-    if (subject.id === id) {
-      return {
-        ...subject,
-        votes: {
-          ...subject.votes,
-          [voteType]: subject.votes[voteType] + 1
-        }
-      };
-    }
-    return subject;
-  });
+  console.log('POST /vote called with body:', event.body);
+  try {
+    const { id, voteType } = JSON.parse(event.body);
+    
+    subjects = subjects.map(subject => {
+      if (subject.id === id) {
+        return {
+          ...subject,
+          votes: {
+            ...subject.votes,
+            [voteType]: subject.votes[voteType] + 1
+          }
+        };
+      }
+      return subject;
+    });
 
+    console.log('Updated subjects:', subjects);
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ success: true, subjects })
+    };
+  } catch (error) {
+    console.error('Error processing vote:', error);
+    return {
+      statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ 
+        success: false, 
+        error: 'Invalid request' 
+      })
+    };
+  }
+};
+
+// OPTIONS handler for CORS
+export const options = async (event) => {
   return {
     statusCode: 200,
     headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
     },
-    body: JSON.stringify({ success: true })
+    body: JSON.stringify({})
   };
 };
 EOL
 
-# Update serverless.yml to add vote endpoint
+# Update serverless.yml with correct CORS configuration
 cat > $BACKEND_PATH/serverless.yml << 'EOL'
 service: subject-voting-api
 frameworkVersion: '4'
@@ -97,6 +130,12 @@ functions:
       - httpApi:
           path: /vote
           method: post
+  options:
+    handler: handler.options
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: options
 
 custom:
   serverless-offline:
