@@ -1,0 +1,77 @@
+{
+  "subjects": [
+    {
+      "id": 1,
+      "title": "Kubernetes",
+      "emoji": "🚢",
+      "votes": {
+        "up": 4,
+        "down": 0
+      },
+      "voterHistory": [
+        {
+          "userId": "user1",
+          "timestamp": "2025-02-23T13:01:26.324Z",
+          "points": 10,
+          "voteType": "up",
+          "position": 1
+        },
+        {
+          "userId": "user2",
+          "timestamp": "2025-02-23T13:01:28.957Z",
+          "points": 10,
+          "voteType": "up",
+          "position": 2
+        },
+        {
+          "userId": "user3",
+          "timestamp": "2025-02-23T13:01:31.472Z",
+          "points": 10,
+          "voteType": "up",
+          "position": 3
+        },
+        {
+          "userId": "user4",
+          "timestamp": "2025-02-23T13:01:33.972Z",
+          "points": 10,
+          "voteType": "up",
+          "position": 4
+        }
+      ],
+      "lastUpdated": "2025-02-23T13:01:33.972Z"
+    },
+    {
+      "id": 2,
+      "title": "AWS Cloud",
+      "emoji": "☁️",
+      "votes": {
+        "up": 0,
+        "down": 0
+      },
+      "voterHistory": [],
+      "lastUpdated": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "title": "Ubuntu Linux",
+      "emoji": "🐧",
+      "votes": {
+        "up": 0,
+        "down": 0
+      },
+      "voterHistory": [],
+      "lastUpdated": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "title": "LangChain",
+      "emoji": "🔗",
+      "votes": {
+        "up": 0,
+        "down": 0
+      },
+      "voterHistory": [],
+      "lastUpdated": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}

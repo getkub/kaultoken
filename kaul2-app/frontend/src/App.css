@@ -42,12 +42,59 @@
   border-radius: 8px;
 }
 
+.points-summary {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.points-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.points-row:last-child {
+  border-bottom: none;
+}
+
+.points-row.total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid #eee;
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #2196f3;
+}
+
+.points {
+  font-weight: 500;
+}
+
 .reward-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin: 8px 0;
   padding: 10px;
   background: white;
   border-radius: 6px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.reward-points {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.user-stats h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
 }
 
 .main-content {
@@ -141,4 +188,58 @@
   padding: 40px;
   font-size: 1.2em;
   color: #666;
+}
+
+.points-row .up-rewards {
+  color: #4caf50;
+}
+
+.points-row .down-rewards {
+  color: #f44336;
+}
+
+.reward-item.up {
+  border-left: 3px solid #4caf50;
+}
+
+.reward-item.down {
+  border-left: 3px solid #f44336;
+}
+
+.rewards-breakdown {
+  margin-top: 20px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.rewards-breakdown h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.section-divider {
+  font-weight: 500;
+  color: #666;
+  padding: 15px 0 5px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
+.points-row .donated-up {
+  color: #2196f3;
+}
+
+.points-row .donated-down {
+  color: #f44336;
+}
+
+.total-donated {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #eee;
+  font-weight: 500;
+  color: #e91e63;
 }

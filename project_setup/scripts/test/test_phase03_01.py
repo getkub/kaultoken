@@ -22,116 +22,213 @@ class ProjectSetup:
         self.scripts_path.mkdir(parents=True, exist_ok=True)
         print(f"Created directories at {self.backend_path}")
 
-    def generate_db_code(self, template: Dict[str, Any]) -> str:
-        """Generate the db.js code"""
-        return f"""import {{ Low }} from 'lowdb'
-import {{ JSONFile }} from 'lowdb/node'
+    def create_db_files(self):
+        """Create separate db files for subjects and users"""
+        
+        # subjects.js
+        subjects_db_code = """import { Low } from 'lowdb'
+import { JSONFile } from 'lowdb/node'
 import path from 'path'
-import {{ fileURLToPath }} from 'url'
+import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const dbPath = path.join(__dirname, 'db.json')
+const dbPath = path.join(__dirname, 'subjects.json')
 
-const defaultData = {json.dumps(template, indent=2)}
+const defaultData = {
+  subjects: [
+    { 
+      id: 1, 
+      title: 'Kubernetes',
+      emoji: '🚢',
+      votes: { up: 0, down: 0 },
+      voterHistory: [],
+      lastUpdated: new Date().toISOString()
+    },
+    { 
+      id: 2, 
+      title: 'AWS Cloud',
+      emoji: '☁️',
+      votes: { up: 0, down: 0 },
+      voterHistory: [],
+      lastUpdated: new Date().toISOString()
+    },
+    { 
+      id: 3, 
+      title: 'Ubuntu Linux',
+      emoji: '🐧',
+      votes: { up: 0, down: 0 },
+      voterHistory: [],
+      lastUpdated: new Date().toISOString()
+    },
+    { 
+      id: 4, 
+      title: 'LangChain',
+      emoji: '🔗',
+      votes: { up: 0, down: 0 },
+      voterHistory: [],
+      lastUpdated: new Date().toISOString()
+    }
+  ]
+}
 
-const adapter = new JSONFile(dbPath)
-const db = new Low(adapter, defaultData)
+const subjectsDb = new Low(new JSONFile(dbPath), defaultData)
 
-// Initialize database with default data
-await db.read()
-if (!db.data) {{
-    db.data = defaultData
-    await db.write()
-}}
+// Initialize database
+await subjectsDb.read()
+if (!subjectsDb.data) {
+  subjectsDb.data = defaultData
+  await subjectsDb.write()
+}
 
-// Ensure users object exists
-if (!db.data.users) {{
-    db.data.users = {{}}
-    await db.write()
-}}
-
-export default db
+export default subjectsDb
 """
 
-    def create_db_file(self):
-        """Create db.js with template"""
-        db_template = {
-            "subjects": [
-                {
-                    "id": 1,
-                    "title": "Kubernetes",
-                    "emoji": "🚢",
-                    "votes": {"up": 0, "down": 0},
-                    "voterHistory": [],
-                    "lastUpdated": "2024-01-01T00:00:00.000Z"
-                },
-                {
-                    "id": 2,
-                    "title": "AWS Cloud",
-                    "emoji": "☁️",
-                    "votes": {"up": 0, "down": 0},
-                    "voterHistory": [],
-                    "lastUpdated": "2024-01-01T00:00:00.000Z"
-                },
-                {
-                    "id": 3,
-                    "title": "Ubuntu Linux",
-                    "emoji": "🐧",
-                    "votes": {"up": 0, "down": 0},
-                    "voterHistory": [],
-                    "lastUpdated": "2024-01-01T00:00:00.000Z"
-                },
-                {
-                    "id": 4,
-                    "title": "LangChain",
-                    "emoji": "🔗",
-                    "votes": {"up": 0, "down": 0},
-                    "voterHistory": [],
-                    "lastUpdated": "2024-01-01T00:00:00.000Z"
-                }
-            ],
-            "users": {}
-        }
+        # users.js
+        users_db_code = """import { Low } from 'lowdb'
+import { JSONFile } from 'lowdb/node'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const dbPath = path.join(__dirname, 'users.json')
+
+const defaultData = {
+  profiles: [
+    { id: 'user1', name: 'Alice', avatar: '👩‍💻' },
+    { id: 'user2', name: 'Bob', avatar: '👨‍💻' },
+    { id: 'user3', name: 'Charlie', avatar: '🧑‍💻' },
+    { id: 'user4', name: 'Diana', avatar: '👩‍🔬' }
+  ],
+  points: {}  // Stores points and rewards for each user
+}
+
+const usersDb = new Low(new JSONFile(dbPath), defaultData)
+
+// Initialize database
+await usersDb.read()
+if (!usersDb.data) {
+  usersDb.data = defaultData
+  await usersDb.write()
+}
+
+export default usersDb
+"""
+
+        # Write the files
+        backend_path = self.backend_path
+        backend_path.mkdir(parents=True, exist_ok=True)
         
-        db_code = self.generate_db_code(db_template)
-        db_file = self.backend_path / "db.js"
-        db_file.write_text(db_code)
-        print(f"Created db.js at {db_file}")
+        (backend_path / "subjects.js").write_text(subjects_db_code)
+        (backend_path / "users.js").write_text(users_db_code)
+        print("Created separate database files")
 
     def create_handler_file(self):
-        """Create handler.js with business logic"""
-        handler_code = """import db from './db.js'
+        """Create handler.js with separate db imports"""
+        handler_code = """import subjectsDb from './subjects.js'
+import usersDb from './users.js'
 
 const VOTE_COST = 10
 const INITIAL_POINTS = 100
+const MIN_REWARD = 0.000001  // Minimum reward threshold
 
-// Helper to initialize or get user
-const initializeUser = (userId) => {
-  if (!db.data.users[userId]) {
-    db.data.users[userId] = {
-      points: INITIAL_POINTS,
-      rewards: {}
-    }
-  }
-  return db.data.users[userId]
+// Tier configuration for precise distribution
+const REWARD_TIERS = {
+  TIER1: { max: 10, share: 5, reward: 0.5 },        // First 10: 5 points (0.5 each)
+  TIER2: { max: 100, share: 3, reward: 0.033 },     // Next 90: 3 points (0.033 each)
+  TIER3: { max: 1000, share: 1.5, reward: 0.00167 }, // Next 900: 1.5 points (0.00167 each)
+  TIER4: { max: 10000, share: 0.5, reward: 0.000056 } // Next 9000: 0.5 points (0.000056 each)
 }
 
-// Helper to distribute rewards
-const distributeRewards = (subjectId, votePoints) => {
-  const subject = db.data.subjects.find(s => s.id === subjectId)
-  if (!subject || !subject.voterHistory.length) return
+const initializeUser = (userId) => {
+  if (!usersDb.data.points[userId]) {
+    usersDb.data.points[userId] = {
+      points: INITIAL_POINTS,
+      upVoteRewards: {},
+      downVoteRewards: {},
+      rewardHistory: []
+    }
+  }
+  return usersDb.data.points[userId]
+}
 
-  subject.voterHistory.forEach((voter, index) => {
-    const rewardShare = votePoints / Math.pow(2, index + 1)
-    const user = initializeUser(voter.userId)
-    if (!user.rewards[subjectId]) user.rewards[subjectId] = 0
-    user.rewards[subjectId] += rewardShare
-  })
+const calculateRewardForPosition = (position) => {
+  // Exact reward based on position tier
+  if (position <= REWARD_TIERS.TIER1.max) {
+    return REWARD_TIERS.TIER1.reward
+  } else if (position <= REWARD_TIERS.TIER2.max) {
+    return REWARD_TIERS.TIER2.reward
+  } else if (position <= REWARD_TIERS.TIER3.max) {
+    return REWARD_TIERS.TIER3.reward
+  } else if (position <= REWARD_TIERS.TIER4.max) {
+    return REWARD_TIERS.TIER4.reward
+  }
+  return 0
+}
+
+const distributeRewards = async (subjectId, voteType, currentVoterId) => {
+  try {
+    const subject = subjectsDb.data.subjects.find(s => s.id === subjectId)
+    if (!subject || !subject.voterHistory) return
+
+    // Get previous voters of the same type
+    const previousVoters = subject.voterHistory
+      .filter(vote => 
+        vote.voteType === voteType && 
+        vote.userId !== currentVoterId
+      )
+
+    console.log(`\nDistributing ${voteType} rewards for subject ${subjectId}`)
+    console.log(`Current voter: ${currentVoterId}`)
+    console.log(`Previous voters: ${previousVoters.length}`)
+
+    let totalDistributed = 0
+    
+    // Calculate and distribute rewards
+    for (let i = 0; i < previousVoters.length; i++) {
+      const voter = previousVoters[i]
+      const position = i + 1
+      const rewardShare = calculateRewardForPosition(position)
+      
+      if (rewardShare < MIN_REWARD) {
+        console.log(`Reward too small (${rewardShare}), stopping distribution`)
+        break
+      }
+
+      const user = initializeUser(voter.userId)
+      const rewardCategory = voteType === 'up' ? 'upVoteRewards' : 'downVoteRewards'
+      
+      if (!user[rewardCategory][String(subjectId)]) {
+        user[rewardCategory][String(subjectId)] = 0
+      }
+      
+      user[rewardCategory][String(subjectId)] += rewardShare
+      user.points += rewardShare
+      totalDistributed += rewardShare
+
+      // Record reward in history
+      user.rewardHistory.push({
+        timestamp: new Date().toISOString(),
+        subjectId: String(subjectId),
+        amount: rewardShare,
+        fromUser: currentVoterId,
+        voteType: voteType,
+        position: position,
+        tier: position <= 10 ? 1 : position <= 100 ? 2 : position <= 1000 ? 3 : 4
+      })
+
+      console.log(`Rewarded ${voter.userId} (position ${position}, tier ${position <= 10 ? 1 : position <= 100 ? 2 : position <= 1000 ? 3 : 4}) with ${rewardShare.toFixed(6)} points`)
+    }
+    
+    console.log(`Total points distributed: ${totalDistributed.toFixed(6)} of ${VOTE_COST}`)
+    await usersDb.write()
+  } catch (error) {
+    console.error('Error in distributeRewards:', error)
+  }
 }
 
 export const getSubjects = async (event) => {
   try {
-    await db.read()
+    await Promise.all([subjectsDb.read(), usersDb.read()])
     return {
       statusCode: 200,
       headers: {
@@ -139,8 +236,9 @@ export const getSubjects = async (event) => {
         'Access-Control-Allow-Origin': '*'
       },
       body: JSON.stringify({
-        subjects: db.data.subjects,
-        users: db.data.users
+        subjects: subjectsDb.data.subjects,
+        users: usersDb.data.points,
+        userProfiles: usersDb.data.profiles
       })
     }
   } catch (error) {
@@ -159,48 +257,55 @@ export const getSubjects = async (event) => {
 export const recordVote = async (event) => {
   try {
     const { id, voteType, userId } = JSON.parse(event.body)
-    await db.read()
+    await Promise.all([subjectsDb.read(), usersDb.read()])
     
     const user = initializeUser(userId)
     if (user.points < VOTE_COST) {
       throw new Error('Not enough points to vote')
     }
 
-    // Find and validate subject
-    const subject = db.data.subjects.find(s => s.id === id)
+    const subject = subjectsDb.data.subjects.find(s => s.id === id)
     if (!subject) {
-      throw new Error(`Subject not found`)
+      throw new Error('Subject not found')
     }
 
-    // Initialize voterHistory if it doesn't exist
-    if (!subject.voterHistory) {
-      subject.voterHistory = []
+    // Initialize if needed
+    if (!subject.votes) subject.votes = { up: 0, down: 0 }
+    if (!subject.voterHistory) subject.voterHistory = []
+
+    // Check for duplicate votes
+    const hasVoted = subject.voterHistory.some(vote => 
+      vote.userId === userId && vote.voteType === voteType
+    )
+    if (hasVoted) {
+      throw new Error('You have already voted this way on this subject')
     }
 
-    // Initialize votes if they don't exist
-    if (!subject.votes) {
-      subject.votes = { up: 0, down: 0 }
-    }
-
-    // Deduct points from user
+    // Deduct points first
     user.points -= VOTE_COST
 
     // Record vote
-    subject.votes[voteType] = (subject.votes[voteType] || 0) + 1
+    subject.votes[voteType]++
     subject.lastUpdated = new Date().toISOString()
     
-    // Add to voter history
+    // Add to voter history with position
     subject.voterHistory.push({
       userId,
       timestamp: new Date().toISOString(),
-      points: VOTE_COST
+      points: VOTE_COST,
+      voteType,
+      position: subject.voterHistory.length + 1
     })
 
-    // Distribute rewards
-    distributeRewards(id, VOTE_COST)
-    
-    // Save changes
-    await db.write()
+    // Save changes and distribute rewards
+    await Promise.all([
+      subjectsDb.write(),
+      distributeRewards(id, voteType, userId)
+    ])
+
+    // Get updated user data
+    await usersDb.read()
+    const updatedUser = usersDb.data.points[userId]
 
     return {
       statusCode: 200,
@@ -210,8 +315,9 @@ export const recordVote = async (event) => {
       },
       body: JSON.stringify({ 
         success: true, 
-        subjects: db.data.subjects,
-        user: user
+        subjects: subjectsDb.data.subjects,
+        user: updatedUser,
+        message: `Vote recorded! Rewards distributed to previous voters.`
       })
     }
   } catch (error) {
@@ -242,21 +348,19 @@ export const options = async (event) => {
     body: JSON.stringify({})
   }
 }"""
-        handler_file = self.backend_path / "handler.js"
-        handler_file.write_text(handler_code)
-        print(f"Created handler.js at {handler_file}")
+        (self.backend_path / "handler.js").write_text(handler_code)
+        print("Created handler.js with separate db handling")
 
     def create_app_file(self):
         """Create App.jsx with user selection and points display"""
         app_code = """import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const USERS = ['user1', 'user2', 'user3', 'user4'];
-
 function App() {
   const [subjects, setSubjects] = useState([]);
   const [selectedUser, setSelectedUser] = useState('user1');
   const [userPoints, setUserPoints] = useState({});
+  const [userProfiles, setUserProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -271,6 +375,7 @@ function App() {
       console.log('Fetched data:', data);  // Debug log
       setSubjects(data.subjects || []);
       setUserPoints(data.users || {});
+      setUserProfiles(data.userProfiles || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
     } finally {
@@ -307,14 +412,49 @@ function App() {
     }
   };
 
-  const getCurrentUserPoints = () => {
-    const user = userPoints[selectedUser];
-    return user ? user.points : 100;
-  };
+  const calculatePointsStats = () => {
+    const user = userPoints[selectedUser] || { 
+      points: 100, 
+      upVoteRewards: {}, 
+      downVoteRewards: {} 
+    };
+    
+    // Calculate rewards
+    const totalUpVoteRewards = Object.values(user.upVoteRewards || {})
+      .reduce((sum, reward) => sum + reward, 0);
+    const totalDownVoteRewards = Object.values(user.downVoteRewards || {})
+      .reduce((sum, reward) => sum + reward, 0);
+    
+    // Calculate donations (votes made by this user)
+    const donatedPoints = subjects.reduce((total, subject) => {
+      const userVotes = subject.voterHistory?.filter(vote => vote.userId === selectedUser) || [];
+      return total + (userVotes.length * 10); // Each vote costs 10 points
+    }, 0);
 
-  const getCurrentUserRewards = () => {
-    const user = userPoints[selectedUser];
-    return user ? (user.rewards || {}) : {};
+    // Calculate donations by type
+    const upVoteDonations = subjects.reduce((total, subject) => {
+      const userUpVotes = subject.voterHistory?.filter(
+        vote => vote.userId === selectedUser && vote.voteType === 'up'
+      ) || [];
+      return total + (userUpVotes.length * 10);
+    }, 0);
+
+    const downVoteDonations = subjects.reduce((total, subject) => {
+      const userDownVotes = subject.voterHistory?.filter(
+        vote => vote.userId === selectedUser && vote.voteType === 'down'
+      ) || [];
+      return total + (userDownVotes.length * 10);
+    }, 0);
+    
+    return {
+      current: user.points || 100,
+      upVoteRewards: totalUpVoteRewards,
+      downVoteRewards: totalDownVoteRewards,
+      totalRewards: totalUpVoteRewards + totalDownVoteRewards,
+      donatedPoints,
+      upVoteDonations,
+      downVoteDonations
+    };
   };
 
   if (loading) {
@@ -330,19 +470,68 @@ function App() {
           onChange={(e) => setSelectedUser(e.target.value)}
           className="user-select"
         >
-          {USERS.map(user => (
-            <option key={user} value={user}>{user}</option>
+          {userProfiles.map(user => (
+            <option key={user.id} value={user.id}>
+              {user.avatar} {user.name}
+            </option>
           ))}
         </select>
         <div className="user-stats">
-          <h3>Current Points: {getCurrentUserPoints()}</h3>
-          <div className="rewards">
-            <h3>Rewards Earned:</h3>
-            {Object.entries(getCurrentUserRewards()).map(([subjectId, reward]) => (
-              <div key={subjectId} className="reward-item">
-                Subject {subjectId}: {Number(reward).toFixed(1)} points
-              </div>
-            ))}
+          <div className="points-summary">
+            <div className="points-row">
+              <span>Current Points:</span>
+              <span className="points">{calculatePointsStats().current}</span>
+            </div>
+            
+            <div className="section-divider">Rewards Earned</div>
+            <div className="points-row">
+              <span>From Upvotes:</span>
+              <span className="points up-rewards">+{calculatePointsStats().upVoteRewards.toFixed(1)}</span>
+            </div>
+            <div className="points-row">
+              <span>From Downvotes:</span>
+              <span className="points down-rewards">+{calculatePointsStats().downVoteRewards.toFixed(1)}</span>
+            </div>
+            <div className="points-row total">
+              <span>Total Rewards:</span>
+              <span className="points">+{calculatePointsStats().totalRewards.toFixed(1)}</span>
+            </div>
+
+            <div className="section-divider">Points Donated</div>
+            <div className="points-row">
+              <span>Upvotes Given:</span>
+              <span className="points donated-up">-{calculatePointsStats().upVoteDonations}</span>
+            </div>
+            <div className="points-row">
+              <span>Downvotes Given:</span>
+              <span className="points donated-down">-{calculatePointsStats().downVoteDonations}</span>
+            </div>
+            <div className="points-row total-donated">
+              <span>Total Donated:</span>
+              <span className="points">-{calculatePointsStats().donatedPoints}</span>
+            </div>
+          </div>
+          
+          <div className="rewards-breakdown">
+            <h3>Rewards by Subject:</h3>
+            {Object.entries(userPoints[selectedUser]?.upVoteRewards || {}).map(([subjectId, reward]) => {
+              const subject = subjects.find(s => s.id === parseInt(subjectId));
+              return reward > 0 && (
+                <div key={`up-${subjectId}`} className="reward-item up">
+                  <span>👍 {subject?.title || `Subject ${subjectId}`}:</span>
+                  <span className="reward-points">+{reward.toFixed(1)}</span>
+                </div>
+              );
+            })}
+            {Object.entries(userPoints[selectedUser]?.downVoteRewards || {}).map(([subjectId, reward]) => {
+              const subject = subjects.find(s => s.id === parseInt(subjectId));
+              return reward > 0 && (
+                <div key={`down-${subjectId}`} className="reward-item down">
+                  <span>👎 {subject?.title || `Subject ${subjectId}`}:</span>
+                  <span className="reward-points">+{reward.toFixed(1)}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -365,14 +554,14 @@ function App() {
                   <button 
                     onClick={() => handleVote(subject.id, 'up')}
                     className="vote-button vote-up"
-                    disabled={getCurrentUserPoints() < 10}
+                    disabled={calculatePointsStats().current < 10}
                   >
                     Vote Up (10 points)
                   </button>
                   <button 
                     onClick={() => handleVote(subject.id, 'down')}
                     className="vote-button vote-down"
-                    disabled={getCurrentUserPoints() < 10}
+                    disabled={calculatePointsStats().current < 10}
                   >
                     Vote Down (10 points)
                   </button>
@@ -440,12 +629,59 @@ export default App;
   border-radius: 8px;
 }
 
+.points-summary {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.points-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.points-row:last-child {
+  border-bottom: none;
+}
+
+.points-row.total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid #eee;
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #2196f3;
+}
+
+.points {
+  font-weight: 500;
+}
+
 .reward-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin: 8px 0;
   padding: 10px;
   background: white;
   border-radius: 6px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.reward-points {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.user-stats h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
 }
 
 .main-content {
@@ -540,6 +776,60 @@ export default App;
   font-size: 1.2em;
   color: #666;
 }
+
+.points-row .up-rewards {
+  color: #4caf50;
+}
+
+.points-row .down-rewards {
+  color: #f44336;
+}
+
+.reward-item.up {
+  border-left: 3px solid #4caf50;
+}
+
+.reward-item.down {
+  border-left: 3px solid #f44336;
+}
+
+.rewards-breakdown {
+  margin-top: 20px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.rewards-breakdown h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.section-divider {
+  font-weight: 500;
+  color: #666;
+  padding: 15px 0 5px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
+.points-row .donated-up {
+  color: #2196f3;
+}
+
+.points-row .donated-down {
+  color: #f44336;
+}
+
+.total-donated {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #eee;
+  font-weight: 500;
+  color: #e91e63;
+}
 """
         # Create frontend directory if it doesn't exist
         frontend_path = self.frontend_path / "src"
@@ -629,7 +919,7 @@ wait
         try:
             print(f"Setting up {self.project_name}...")
             self.create_directories()
-            self.create_db_file()
+            self.create_db_files()
             self.create_handler_file()
             self.create_app_file()
             self.create_run_script()

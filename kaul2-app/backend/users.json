@@ -1,0 +1,113 @@
+{
+  "profiles": [
+    {
+      "id": "user1",
+      "name": "Alice",
+      "avatar": "👩‍💻"
+    },
+    {
+      "id": "user2",
+      "name": "Bob",
+      "avatar": "👨‍💻"
+    },
+    {
+      "id": "user3",
+      "name": "Charlie",
+      "avatar": "🧑‍💻"
+    },
+    {
+      "id": "user4",
+      "name": "Diana",
+      "avatar": "👩‍🔬"
+    }
+  ],
+  "points": {
+    "user1": {
+      "points": 91.5,
+      "upVoteRewards": {
+        "1": 1.5
+      },
+      "downVoteRewards": {},
+      "rewardHistory": [
+        {
+          "timestamp": "2025-02-23T13:01:28.957Z",
+          "subjectId": "1",
+          "amount": 0.5,
+          "fromUser": "user2",
+          "voteType": "up",
+          "position": 1,
+          "tier": 1
+        },
+        {
+          "timestamp": "2025-02-23T13:01:31.472Z",
+          "subjectId": "1",
+          "amount": 0.5,
+          "fromUser": "user3",
+          "voteType": "up",
+          "position": 1,
+          "tier": 1
+        },
+        {
+          "timestamp": "2025-02-23T13:01:33.972Z",
+          "subjectId": "1",
+          "amount": 0.5,
+          "fromUser": "user4",
+          "voteType": "up",
+          "position": 1,
+          "tier": 1
+        }
+      ]
+    },
+    "user2": {
+      "points": 91,
+      "upVoteRewards": {
+        "1": 1
+      },
+      "downVoteRewards": {},
+      "rewardHistory": [
+        {
+          "timestamp": "2025-02-23T13:01:31.473Z",
+          "subjectId": "1",
+          "amount": 0.5,
+          "fromUser": "user3",
+          "voteType": "up",
+          "position": 2,
+          "tier": 1
+        },
+        {
+          "timestamp": "2025-02-23T13:01:33.972Z",
+          "subjectId": "1",
+          "amount": 0.5,
+          "fromUser": "user4",
+          "voteType": "up",
+          "position": 2,
+          "tier": 1
+        }
+      ]
+    },
+    "user3": {
+      "points": 90.5,
+      "upVoteRewards": {
+        "1": 0.5
+      },
+      "downVoteRewards": {},
+      "rewardHistory": [
+        {
+          "timestamp": "2025-02-23T13:01:33.972Z",
+          "subjectId": "1",
+          "amount": 0.5,
+          "fromUser": "user4",
+          "voteType": "up",
+          "position": 3,
+          "tier": 1
+        }
+      ]
+    },
+    "user4": {
+      "points": 90,
+      "upVoteRewards": {},
+      "downVoteRewards": {},
+      "rewardHistory": []
+    }
+  }
+}

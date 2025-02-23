@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const USERS = ['user1', 'user2', 'user3', 'user4'];
-
 function App() {
   const [subjects, setSubjects] = useState([]);
   const [selectedUser, setSelectedUser] = useState('user1');
   const [userPoints, setUserPoints] = useState({});
+  const [userProfiles, setUserProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,6 +20,7 @@ function App() {
       console.log('Fetched data:', data);  // Debug log
       setSubjects(data.subjects || []);
       setUserPoints(data.users || {});
+      setUserProfiles(data.userProfiles || []);
     } catch (error) {
       console.error('Error fetching subjects:', error);
     } finally {
@@ -57,14 +57,49 @@ function App() {
     }
   };
 
-  const getCurrentUserPoints = () => {
-    const user = userPoints[selectedUser];
-    return user ? user.points : 100;
-  };
+  const calculatePointsStats = () => {
+    const user = userPoints[selectedUser] || { 
+      points: 100, 
+      upVoteRewards: {}, 
+      downVoteRewards: {} 
+    };
+    
+    // Calculate rewards
+    const totalUpVoteRewards = Object.values(user.upVoteRewards || {})
+      .reduce((sum, reward) => sum + reward, 0);
+    const totalDownVoteRewards = Object.values(user.downVoteRewards || {})
+      .reduce((sum, reward) => sum + reward, 0);
+    
+    // Calculate donations (votes made by this user)
+    const donatedPoints = subjects.reduce((total, subject) => {
+      const userVotes = subject.voterHistory?.filter(vote => vote.userId === selectedUser) || [];
+      return total + (userVotes.length * 10); // Each vote costs 10 points
+    }, 0);
 
-  const getCurrentUserRewards = () => {
-    const user = userPoints[selectedUser];
-    return user ? (user.rewards || {}) : {};
+    // Calculate donations by type
+    const upVoteDonations = subjects.reduce((total, subject) => {
+      const userUpVotes = subject.voterHistory?.filter(
+        vote => vote.userId === selectedUser && vote.voteType === 'up'
+      ) || [];
+      return total + (userUpVotes.length * 10);
+    }, 0);
+
+    const downVoteDonations = subjects.reduce((total, subject) => {
+      const userDownVotes = subject.voterHistory?.filter(
+        vote => vote.userId === selectedUser && vote.voteType === 'down'
+      ) || [];
+      return total + (userDownVotes.length * 10);
+    }, 0);
+    
+    return {
+      current: user.points || 100,
+      upVoteRewards: totalUpVoteRewards,
+      downVoteRewards: totalDownVoteRewards,
+      totalRewards: totalUpVoteRewards + totalDownVoteRewards,
+      donatedPoints,
+      upVoteDonations,
+      downVoteDonations
+    };
   };
 
   if (loading) {
@@ -80,19 +115,68 @@ function App() {
           onChange={(e) => setSelectedUser(e.target.value)}
           className="user-select"
         >
-          {USERS.map(user => (
-            <option key={user} value={user}>{user}</option>
+          {userProfiles.map(user => (
+            <option key={user.id} value={user.id}>
+              {user.avatar} {user.name}
+            </option>
           ))}
         </select>
         <div className="user-stats">
-          <h3>Current Points: {getCurrentUserPoints()}</h3>
-          <div className="rewards">
-            <h3>Rewards Earned:</h3>
-            {Object.entries(getCurrentUserRewards()).map(([subjectId, reward]) => (
-              <div key={subjectId} className="reward-item">
-                Subject {subjectId}: {Number(reward).toFixed(1)} points
-              </div>
-            ))}
+          <div className="points-summary">
+            <div className="points-row">
+              <span>Current Points:</span>
+              <span className="points">{calculatePointsStats().current}</span>
+            </div>
+            
+            <div className="section-divider">Rewards Earned</div>
+            <div className="points-row">
+              <span>From Upvotes:</span>
+              <span className="points up-rewards">+{calculatePointsStats().upVoteRewards.toFixed(1)}</span>
+            </div>
+            <div className="points-row">
+              <span>From Downvotes:</span>
+              <span className="points down-rewards">+{calculatePointsStats().downVoteRewards.toFixed(1)}</span>
+            </div>
+            <div className="points-row total">
+              <span>Total Rewards:</span>
+              <span className="points">+{calculatePointsStats().totalRewards.toFixed(1)}</span>
+            </div>
+
+            <div className="section-divider">Points Donated</div>
+            <div className="points-row">
+              <span>Upvotes Given:</span>
+              <span className="points donated-up">-{calculatePointsStats().upVoteDonations}</span>
+            </div>
+            <div className="points-row">
+              <span>Downvotes Given:</span>
+              <span className="points donated-down">-{calculatePointsStats().downVoteDonations}</span>
+            </div>
+            <div className="points-row total-donated">
+              <span>Total Donated:</span>
+              <span className="points">-{calculatePointsStats().donatedPoints}</span>
+            </div>
+          </div>
+          
+          <div className="rewards-breakdown">
+            <h3>Rewards by Subject:</h3>
+            {Object.entries(userPoints[selectedUser]?.upVoteRewards || {}).map(([subjectId, reward]) => {
+              const subject = subjects.find(s => s.id === parseInt(subjectId));
+              return reward > 0 && (
+                <div key={`up-${subjectId}`} className="reward-item up">
+                  <span>👍 {subject?.title || `Subject ${subjectId}`}:</span>
+                  <span className="reward-points">+{reward.toFixed(1)}</span>
+                </div>
+              );
+            })}
+            {Object.entries(userPoints[selectedUser]?.downVoteRewards || {}).map(([subjectId, reward]) => {
+              const subject = subjects.find(s => s.id === parseInt(subjectId));
+              return reward > 0 && (
+                <div key={`down-${subjectId}`} className="reward-item down">
+                  <span>👎 {subject?.title || `Subject ${subjectId}`}:</span>
+                  <span className="reward-points">+{reward.toFixed(1)}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -115,14 +199,14 @@ function App() {
                   <button 
                     onClick={() => handleVote(subject.id, 'up')}
                     className="vote-button vote-up"
-                    disabled={getCurrentUserPoints() < 10}
+                    disabled={calculatePointsStats().current < 10}
                   >
                     Vote Up (10 points)
                   </button>
                   <button 
                     onClick={() => handleVote(subject.id, 'down')}
                     className="vote-button vote-down"
-                    disabled={getCurrentUserPoints() < 10}
+                    disabled={calculatePointsStats().current < 10}
                   >
                     Vote Down (10 points)
                   </button>
