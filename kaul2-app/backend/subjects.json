@@ -5,7 +5,7 @@
       "title": "Kubernetes",
       "emoji": "🚢",
       "votes": {
-        "up": 1,
+        "up": 3,
         "down": 0
       },
       "voterHistory": [
@@ -15,9 +15,23 @@
           "points": 10,
           "voteType": "up",
           "position": 1
+        },
+        {
+          "userId": "user2",
+          "timestamp": "2025-02-24T01:12:34.424Z",
+          "points": 10,
+          "voteType": "up",
+          "position": 2
+        },
+        {
+          "userId": "user3",
+          "timestamp": "2025-02-24T01:14:59.390Z",
+          "points": 10,
+          "voteType": "up",
+          "position": 3
         }
       ],
-      "lastUpdated": "2025-02-23T13:20:19.965Z"
+      "lastUpdated": "2025-02-24T01:14:59.390Z"
     },
     {
       "id": 2,

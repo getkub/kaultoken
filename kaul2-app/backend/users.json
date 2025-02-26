@@ -23,6 +23,22 @@
   ],
   "points": {
     "user1": {
+      "points": 91,
+      "upVoteRewards": {
+        "1": 1
+      },
+      "downVoteRewards": {},
+      "rewardHistory": []
+    },
+    "user2": {
+      "points": 90.5,
+      "upVoteRewards": {
+        "1": 0.5
+      },
+      "downVoteRewards": {},
+      "rewardHistory": []
+    },
+    "user3": {
       "points": 90,
       "upVoteRewards": {},
       "downVoteRewards": {},
